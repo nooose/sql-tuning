@@ -453,3 +453,127 @@ and 평형타입 = 'A'
 데이터 분포나 수직적 탐색 비용을 따져보고 변경하자
 ### 3.3.7 Index Skip Scan 활용
 
+```SQL
+create index IDX_NAME on TABLE_NAME(B, A);
+
+```
+```SQL
+select /*+ INDEX_SS(t IDX_NAME) */ count(*)
+from TABLE_NAME t
+where A = 'A'
+and B between '201801' and '201812'
+```
+
+- 굳이 조건절을 바꾸지 않고도 IN-List 조건과 같은 효과를 낼 방법이다.
+
+### 3.3.8 IN 조건은 '='인가
+**?**
+
+### 3.3.9 BETWEEN과 LIKE 스캔 범위 비교
+- `LIKE`보다 `BETWEEN`을 사용하는 게 낫다.
+  - 정확히 스캔 범위를 지정해주기 때문
+
+### 3.3.10 범위검색 조건을 남용할 때 생기는 비효율
+```SQL
+SELECT 고객ID, 상품명, 지역코드 ...
+FROM 가입상품
+WHERE 회사코드 = :com
+AND 지역코드 = :reg
+AND 상품명 LIKE :prod || '%'
+```
+
+```SQL
+SELECT 고객ID, 상품명, 지역코드 ...
+FROM 가입상품
+WHERE 회사코드 = :com
+AND 지역코드 LIKE :reg || '%'
+AND 상품명 LIKE :prod || '%'
+```
+
+첫 번째는 적은 범위를 스캔하지만 두번째 쿼리는 상품명이 필터 조건으로 바뀌면서 넓은 범위를 스캔하게된다.
+
+**쉽게 관리하기 위해 인덱스 컬럼에 범위검색 조건을 남용하면 인덱스 스캔 비효율이 발생한다**
+
+### 3.3.11 다양한 옵션 조건 처리 방식의 장단점 비교
+#### **OR 조건 활용**
+?
+
+#### **LIKE/BETWEEN 조건 활용**
+
+1. 인덱스 선두 컬럼
+   ```SQL
+   -- 인덱스는 고객ID + 거래일자로 구성
+   select * from 거래
+   where 고객ID like :cust_id || '%'
+   and 거래일자 between :dt1 and :dt2
+   ```
+   - 인덱스 선두 컬럼에 대한 옵션 조건을 LIKIE/BETWEEN 연산자로 처리하는 것은 금물
+   - 고객ID 값을 입력하지 않을 시 모든 거래 데이터를 스캔하는 불상사가 발생
+
+2. NULL 허용 컬럼
+   ```SQL
+   -- 인덱스는 고객ID + 거래일자로 구성
+   select * from 거래
+   where 고객ID like '%'
+   and 거래일자 between :dt1 and :dt2
+   ```
+   - 실제 NULL값이 입력되어 있다면 데이터가 결과집합에서 누락된다.
+3. 숫자형 컬럼
+   ```SQL
+   -- 인덱스는 고객ID + 거래일자로 구성
+   select * from 거래
+   where 거래일자 = :dt
+   and 고객ID like :cust_id || '%'
+   -- and to_char(고객ID) like :cust_id || '%'
+   ```
+   - 고객ID가 숫자형 컬럼이라면 자동 형변환이 발생하므로 인덱스 컬럼이 가공되어 Range Scan이 불가
+4. 가변 길이 컬럼
+  - LIKE를 옵션 조건에 사용할 때는 컬럼 값 길이가 고정적이어야 한다.
+    - 예시) '김'을 조회하면 '김훈'도 같이 조회
+
+
+#### **UNION ALL 활용**
+```SQL
+select * from 거래
+where :cust_id is null
+and 거래일자 between :dt1 and :dt2
+union all
+select * from 거래
+where :cust_id is not null
+and 고객ID = :cust_id
+and 거래일자 between :dt1 and :dt2
+```
+
+- :cust_id에 값을 입력하든 안 하든, 인덱스를 가장 최적으로 사용
+- SQL이 길어지는 단점
+
+#### **NVL/DECODE 함수 활용**
+```SQL
+select * from 거래
+where 고객ID = nvl(:cust_id, 고객ID)
+and 거래일자 between :dt1 and :dt2
+
+-- 또는
+
+select * from 거래
+where 고객ID = decode(:cust_id, null, 고객ID, :cust_id)
+and 거래일자 between :dt1 and :dt2
+```
+
+### 3.3.12 함수호출부하 해소를 위한 인덱스 구성
+#### **PL/SQL 함수의 성능적 특성**
+- PL/SQL 사용자 정의 함수가 느린 이유 3가지
+  - 가상머신(VM) 상에서 실행되는 인터프리터 언어
+  - 호출 시마다 컨텍스트 스위칭 발생
+    - SQL 실행엔진과 PL/SQL 가상머신 사이에 컨텍스트 스위칭이 일어난다.
+  - 내장 SQL에 대한 Recursive Call 발생 (가장 결정적인 요소)
+    - 함수에 SQL이 내장돼 있으면 그 SQL도 같은 횟수 실행
+#### **효과적인 인덱스 구성을 통한 함수호출 최소화**
+
+
+
+
+
+
+
+
