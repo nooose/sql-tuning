@@ -140,3 +140,38 @@ partition by hash(고객ID) partitions 4;
 
 > 해시 알고리즘 특성상 등치(=) 조건 또는 IN-List 조건으로 검색할 때만 파티션 Pruning이 작동한다.
 
+#### 리스트 파티션
+```SQL
+-- 파티션 생성 예제
+crate table 인터넷매물 (물건코드 varchar2(5), 지역분류 varchar2(4), ...)
+partition by list(지역분류) (
+    partition P_지역1 values ('서울'),
+    partition P_지역2 values ('경기', '인천'),
+    partition P_지역3 values ('부산', '대구', '대전', '광주'),partition P_지역4 values (DEFAULT)
+);
+```
+사용자가 정의한 그룹핑 기준에 따라 데이터를 분할 저장하는 방식이다.
+
+Range 파티션에선 값의 순서에 따라 저장할 파티션이 결정되지만, 리스트 파티션에서는 순서와 상관없이 불연속적인 값의 목록에 의해 결정된다.
+
+### 6.3.2 인덱스 파티션
+- 테이블 파티션
+  - 비파티션 테이블(Non-Partitioned Table)
+  - 파티션 테이블(Partitioned Table)
+- 인덱스
+  - 로컬 파티션 인덱스(Local Partitioned Table)
+    - 테이블 파티션과 인덱스 파티션이 1:1 대응 관계가 되도록 오라클이 자동으로 관리하는 파티션 인덱스
+  - 글로벌 파티션 인덱스(Global Partitioned Table)
+    - 로컬이 아닌 파티션 인덱스
+    - 테이블 파티션과 독립적인 구성을 갖는다. 
+  - 비파티션 인덱스(Non-Partitioned Table)
+
+#### **로컬 파티션(Local Partitioned) 인덱스**
+
+#### **글로벌 파티션(Global Partitioned) 인덱스**
+
+#### **비파티션(Non-Partitioned) 인덱스**
+
+#### **Prefixed vs. Nonprefixed**
+
+#### **중요한 인덱스 파티션 제약**
