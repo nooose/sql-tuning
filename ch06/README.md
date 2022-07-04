@@ -56,6 +56,7 @@
   ```SQL
   alter table t NOLOGGING;
   ```
+![1](/ch06/image/1.png)
 
 #### **Direct Path Insert 사용 시 주의할 점**
 1. 성능은 빨라지지만 Exclusive 모드 TM Lock이 걸려 커밋하기 전까지 다른 트랜잭션은 해당 테이블에 DML을 수행하지 못한다. 트랜잭션이 빈번한 주간에 이 옵션을 사용하는 것은 절대 금물.
@@ -186,6 +187,7 @@ Range 파티션에선 값의 순서에 따라 저장할 파티션이 결정되�
 create index 주문_x01 on 주문 (주문일자, 주문금액) LOCAL; --> 로컬 PREFIXED 파티션 인덱스
 create index 주문_x02 on 주문 (고객ID, 주문일자) LOCAL; --> 로컬 NON_PREFIXED 파티션 인덱스
 ```
+![2](/ch06/image/2.png)
 
 #### **글로벌 파티션(Global Partitioned) 인덱스**
 - 인덱스 파티션을 테이블과 다르게 구성한 인덱스
@@ -200,7 +202,7 @@ partition by range (주문금액) (
   pratition P_MX values less than (MAXVALUE)
 ); --> 글로벌 PREFIXED 파티션 인덱스
 ```
-
+![3](/ch06/image/3.png)
 
 #### **비파티션(Non-Partitioned) 인덱스 or 글로벌 비파티션 인덱스** 
 ```SQL
@@ -208,7 +210,7 @@ create index 주문_x04 on 주문 (고객ID, 배송일자); --> 비파티션 인
 ```
 
 - 테이블 파티션 구성을 변경(drop, exchange, split 등)하는 순간 Unusable 상태로 바뀌므로 인덱스를 재생성해 줘야 한다. (그동안 해당 테이블을 사용하는 서비스를 중단해야 함)
-
+![4](/ch06/image/4.png)
 #### **Prefixed vs. Nonprefixed**
 파티션  인덱스를 Prefixed와 Nonprefixed로 나눌 수도 있다.
 
