@@ -70,6 +70,18 @@ INSERT는 append 힌트로 Direct Path Write 방식으로 유도가 가능하지
     ```SQL
     alter session enable parallel dml;
     ```
+
+- DML 문에 힌트 사용
+  ```SQL
+  insert /*+ parallel(c 4) */ into 고객 c
+  select /*+ full(o) parallel(o 4) */ * from 외부가입고객 o;
+
+  update /*+ full(c) parallel(c 4) */ 고객 c set 고객상태코드 = 'WD' where 최종거래일시 < '20100101';
+
+  delete /*+ full(c) parallel(c 4) */ from 고객 c
+  where 탈퇴일시 < '20100101';
+  ```
+
 > **두 단계 전략**
 > 
 > DML 문에 두 단계 전략을 사용한다.
@@ -147,7 +159,8 @@ crate table 인터넷매물 (물건코드 varchar2(5), 지역분류 varchar2(4),
 partition by list(지역분류) (
     partition P_지역1 values ('서울'),
     partition P_지역2 values ('경기', '인천'),
-    partition P_지역3 values ('부산', '대구', '대전', '광주'),partition P_지역4 values (DEFAULT)
+    partition P_지역3 values ('부산', '대구', '대전', '광주'),
+    partition P_지역4 values (DEFAULT)
 );
 ```
 사용자가 정의한 그룹핑 기준에 따라 데이터를 분할 저장하는 방식이다.
@@ -170,8 +183,8 @@ Range 파티션에선 값의 순서에 따라 저장할 파티션이 결정되�
 - 파티션별로 별도 인덱스를 만드는 것
 - 테이블 파티션 속성을 그대로 상속받는다. (테이블 파티션 키와 인덱스 파티션 키가 같다)
 ```SQL
-create index 주문_x01 on 주문 (주문일자, 주문금액) LOCAL;
-create index 주문_x02 on 주문 (고객ID, 주문일자) LOCAL;
+create index 주문_x01 on 주문 (주문일자, 주문금액) LOCAL; --> 로컬 PREFIXED 파티션 인덱스
+create index 주문_x02 on 주문 (고객ID, 주문일자) LOCAL; --> 로컬 NON_PREFIXED 파티션 인덱스
 ```
 
 #### **글로벌 파티션(Global Partitioned) 인덱스**
@@ -185,13 +198,13 @@ create index 주문_x03 on 주문 (주문금액, 주문일자) GLOBAL
 partition by range (주문금액) (
   partition P_01 values less than (10000),
   pratition P_MX values less than (MAXVALUE)
-);
+); --> 글로벌 PREFIXED 파티션 인덱스
 ```
 
 
 #### **비파티션(Non-Partitioned) 인덱스 or 글로벌 비파티션 인덱스** 
 ```SQL
-create index 주문_x04 on 주문 (고객ID, 배송일자);
+create index 주문_x04 on 주문 (고객ID, 배송일자); --> 비파티션 인덱스
 ```
 
 - 테이블 파티션 구성을 변경(drop, exchange, split 등)하는 순간 Unusable 상태로 바뀌므로 인덱스를 재생성해 줘야 한다. (그동안 해당 테이블을 사용하는 서비스를 중단해야 함)
